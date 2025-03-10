@@ -23,7 +23,7 @@ jobs:
         run: |
           # Create a proper JSON payload
           echo '{
-            "model": "deepseek/deepseek-coder-1.3b-instruct",
+            "model": "deepseek/deepseek-r1-distill-llama-70b:free",
             "messages": [
               {
                 "role": "system", 
