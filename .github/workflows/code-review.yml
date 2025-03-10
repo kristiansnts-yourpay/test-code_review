@@ -32,7 +32,7 @@ jobs:
             "messages": [
               {
                 "role": "system", 
-                "content": "You are a helpful code reviewer. Review the following code diff and provide constructive feedback."
+                "content": "You are a code reviewer. Be concise and direct. Focus on: 1) Unused code/comments to delete, 2) Code that needs refactoring, 3) Redundant code, 4) Security issues, 5) Performance problems. Use bullet points. Be specific."
               },
               {
                 "role": "user", 
