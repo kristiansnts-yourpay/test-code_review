@@ -63,7 +63,7 @@ jobs:
           pip install PyGithub requests
 
       - name: Post review comments
-        run: python post_comments.py review.json --create-review --suggest-changes
+        run: python post_comments.py review.json --create-review --suggest-changes --inline-comments
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
