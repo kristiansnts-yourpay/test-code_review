@@ -38,8 +38,31 @@ jobs:
 
       - name: Generate review payload
         run: |
-          # Use the guidelines_selector.py script to generate the payload
-          python guidelines_selector.py diff.patch payload.json
+          # Create __init__.py files for the package structure
+          mkdir -p code_review/github_client code_review/parsers code_review/guidelines code_review/cli
+          touch code_review/__init__.py
+          touch code_review/github_client/__init__.py
+          touch code_review/parsers/__init__.py
+          touch code_review/guidelines/__init__.py
+          touch code_review/cli/__init__.py
+          
+          # Install the local package in development mode
+          pip install -e .
+          
+          # Use the refactored code to generate payload
+          python -c "
+          from code_review.guidelines.selector import GuidelinesSelector
+          import json
+          
+          with open('diff.patch', 'r') as f:
+              diff_content = f.read()
+          
+          selector = GuidelinesSelector()
+          payload = selector.create_review_payload(diff_content)
+          
+          with open('payload.json', 'w') as f:
+              json.dump(payload, f)
+          "
 
       - name: Send diff to AI for review
         run: |
@@ -54,7 +77,7 @@ jobs:
           cat review.json
 
       - name: Post review comments
-        run: python post_comments.py review.json
+        run: python -m code_review.cli.post_comments review.json --suggest-changes --inline-comments
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
