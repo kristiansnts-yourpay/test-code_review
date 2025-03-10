@@ -32,9 +32,17 @@ class PRClient:
 
     def post_inline_comments(self, comments: List[Dict], as_review: bool = False) -> None:
         """Post inline comments on specific lines."""
+        # Create a cache for existing comments to avoid duplicates
+        existing_comments = self._get_existing_comments()
+        
         if as_review:
             review_comments = []
             for comment in comments:
+                # Skip if a similar comment already exists
+                if self._is_duplicate_comment(existing_comments, comment):
+                    print(f"Skipping duplicate comment for {comment['path']}:{comment['line']}")
+                    continue
+                
                 position = self._get_position_in_diff(comment['path'], comment['line'])
                 if position is not None:
                     review_comments.append({
@@ -47,14 +55,22 @@ class PRClient:
                 self.pr.create_review(comments=review_comments, event="COMMENT")
         else:
             for comment in comments:
+                # Skip if a similar comment already exists
+                if self._is_duplicate_comment(existing_comments, comment):
+                    print(f"Skipping duplicate comment for {comment['path']}:{comment['line']}")
+                    continue
+                
                 position = self._get_position_in_diff(comment['path'], comment['line'])
                 if position is not None:
-                    self.pr.create_review_comment(
-                        body=comment['body'],
-                        commit_id=self.pr.get_commits().reversed[0].sha,
-                        path=comment['path'],
-                        position=position
-                    )
+                    try:
+                        self.pr.create_review_comment(
+                            body=comment['body'],
+                            commit_id=self.pr.get_commits().reversed[0].sha,
+                            path=comment['path'],
+                            position=position
+                        )
+                    except Exception as e:
+                        print(f"Failed to create review comment for {comment['path']}:{comment['line']}: {str(e)}")
 
     def _get_position_in_diff(self, file_path: str, line_number: int) -> Optional[int]:
         """Convert a file line number to a position in the diff."""
@@ -83,3 +99,24 @@ class PRClient:
                 current_line += 1
         
         return None 
+
+    def _get_existing_comments(self) -> List[Dict]:
+        """Get all existing review comments on the PR."""
+        comments = []
+        for comment in self.pr.get_review_comments():
+            comments.append({
+                'path': comment.path,
+                'line': comment.line or 0,
+                'body': comment.body,
+                'id': comment.id
+            })
+        return comments
+
+    def _is_duplicate_comment(self, existing_comments: List[Dict], new_comment: Dict) -> bool:
+        """Check if a similar comment already exists."""
+        for existing in existing_comments:
+            if (existing['path'] == new_comment['path'] and 
+                existing['line'] == new_comment['line'] and
+                new_comment['body'][:50] in existing['body']):
+                return True
+        return False 

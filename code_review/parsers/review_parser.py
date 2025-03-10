@@ -1,5 +1,6 @@
 import re
 from typing import List, Dict, Optional
+from code_review.utils.config_loader import REVIEW_CONFIG
 
 class ReviewParser:
     @staticmethod
@@ -47,6 +48,26 @@ class ReviewParser:
         return processed_content
 
     @staticmethod
+    def format_comment(comment_type, severity, message):
+        """Format a comment with emoji and proper formatting."""
+        emoji = REVIEW_CONFIG["emojis"].get(comment_type, "💭")
+        return f"{emoji} **{comment_type.upper()}** ({severity})\n\n{message}"
+    
+    @staticmethod
+    def merge_comments(comments):
+        """Merge comments on the same line."""
+        merged = {}
+        
+        for comment in comments:
+            key = f"{comment['path']}:{comment['line']}"
+            if key not in merged:
+                merged[key] = comment.copy()
+            else:
+                merged[key]['body'] += f"\n\n{comment['body']}"
+        
+        return list(merged.values())
+
+    @staticmethod
     def extract_inline_comments(content: str, file_changes: Dict) -> List[Dict]:
         """Extract comments that should be posted inline on specific lines of code."""
         comments = []
@@ -65,7 +86,23 @@ class ReviewParser:
         if not comments:
             ReviewParser._process_code_blocks(content, file_changes, comments)
         
-        return comments
+        # Process extracted comments
+        for comment_data in comments:
+            path = comment_data.get('path')
+            line = comment_data.get('line')
+            comment_type = comment_data.get('type', 'suggestion')
+            severity = comment_data.get('severity', 'medium')
+            message = comment_data.get('body', '')
+            
+            if path and line and message:
+                comments.append({
+                    'path': path,
+                    'line': int(line),
+                    'body': ReviewParser.format_comment(comment_type, severity, message)
+                })
+        
+        # Merge comments on the same line
+        return ReviewParser.merge_comments(comments)
 
     @staticmethod
     def _process_section(section: str, file_patterns: List[str], file_changes: Dict, comments: List[Dict]) -> None:

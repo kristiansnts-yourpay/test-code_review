@@ -34,17 +34,21 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          pip install parse-diff  # Added for parsing git diffs
           pip install PyGithub requests
 
       - name: Generate review payload
         run: |
           # Create __init__.py files for the package structure
-          mkdir -p code_review/github_client code_review/parsers code_review/guidelines code_review/cli
+          mkdir -p code_review/github_client code_review/parsers code_review/guidelines code_review/cli code_review/stats code_review/utils code_review/config
           touch code_review/__init__.py
           touch code_review/github_client/__init__.py
           touch code_review/parsers/__init__.py
           touch code_review/guidelines/__init__.py
           touch code_review/cli/__init__.py
+          touch code_review/stats/__init__.py
+          touch code_review/utils/__init__.py
+          touch code_review/config/__init__.py
           
           # Install the local package in development mode
           pip install -e .
@@ -52,13 +56,14 @@ jobs:
           # Use the refactored code to generate payload
           python -c "
           from code_review.guidelines.selector import GuidelinesSelector
+          from code_review.utils.config_loader import REVIEW_CONFIG
           import json
           
           with open('diff.patch', 'r') as f:
               diff_content = f.read()
           
           selector = GuidelinesSelector()
-          payload = selector.create_review_payload(diff_content)
+          payload = selector.create_review_payload(diff_content, REVIEW_CONFIG['review_prompt'])
           
           with open('payload.json', 'w') as f:
               json.dump(payload, f)
@@ -77,7 +82,23 @@ jobs:
           cat review.json
 
       - name: Post review comments
-        run: python -m code_review.cli.post_comments review.json --suggest-changes --inline-comments
+        run: python -m code_review.cli.post_comments review.json --suggest-changes --inline-comments --create-review
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO_NAME: ${{ github.repository }}
+
+      - name: Cache review stats
+        uses: actions/cache@v2
+        with:
+          path: ./review_stats.json
+          key: ${{ github.repository }}-pr-${{ github.event.pull_request.number }}-stats
+          restore-keys: |
+            ${{ github.repository }}-pr-${{ github.event.pull_request.number }}-
+
+      - name: Generate review statistics
+        if: always()  # Run even if previous steps fail
+        run: python -m code_review.cli.generate_stats review.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}

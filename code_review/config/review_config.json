@@ -1,0 +1,16 @@
+{
+  "emojis": {
+    "type-safety": "🔒",
+    "architecture": "🏗️",
+    "readability": "📖",
+    "security": "🛡️",
+    "performance": "⚡",
+    "suggestion": "💡",
+    "good-practice": "✨",
+    "blocking": "🚫"
+  },
+  "concurrency_limit": 3,
+  "supported_extensions": [".js", ".jsx", ".ts", ".tsx", ".py", ".go", ".java", ".rb", ".php", ".cs"],
+  "max_file_size": 500000,
+  "review_prompt": "Review the code changes and provide specific, actionable feedback. Focus on:\n1. Type safety and potential runtime issues\n2. Architecture and design patterns\n3. Code readability and maintainability\n4. Security vulnerabilities\n5. Performance implications\n\nFormat each issue as:\n- Type: (type-safety|architecture|readability|security|performance|suggestion|good-practice)\n- Severity: (high|medium|low)\n- Line: <line_number>\n- Message: <detailed_explanation>\n\nCombine multiple issues on the same line into a single comment.\nBe specific and provide examples where possible."
+}
