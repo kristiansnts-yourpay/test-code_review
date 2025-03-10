@@ -28,7 +28,7 @@ jobs:
         run: |
           # Create a proper JSON payload
           echo '{
-            "model": "google/gemini-2.0-flash-thinking-exp:free",
+            "model": "deepseek/deepseek-r1:free",
             "messages": [
               {
                 "role": "system", 
