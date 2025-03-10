@@ -17,14 +17,34 @@ jobs:
       - name: Extract diff
         run: |
           git diff ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} > diff.patch
+          cat diff.patch
 
-      - name: Send diff to DeepSeek R1 Zero
+      - name: Send diff to AI for review
         run: |
-          response=$(curl -X POST -H "Authorization: Bearer ${{ secrets.OPENROUTER_API_KEY }}" \
-          -H "Content-Type: application/json" \
-          -d @diff.patch \
-          https://openrouter.ai/api/v1/completions)
-          echo "$response" > review.json
+          # Create a proper JSON payload
+          echo '{
+            "model": "deepseek/deepseek-coder-1.3b-instruct",
+            "messages": [
+              {
+                "role": "system", 
+                "content": "You are a helpful code reviewer. Review the following code diff and provide constructive feedback."
+              },
+              {
+                "role": "user", 
+                "content": "'"$(cat diff.patch | sed 's/"/\\"/g')"'"
+              }
+            ]
+          }' > payload.json
+          
+          # Send to OpenRouter
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.OPENROUTER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d @payload.json \
+            https://openrouter.ai/api/v1/chat/completions > review.json
+          
+          # Show the response for debugging
+          cat review.json
 
       - name: Set up Python
         uses: actions/setup-python@v2

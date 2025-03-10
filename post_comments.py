@@ -15,11 +15,28 @@ def main():
     with open(review_file, 'r') as f:
         review_data = json.load(f)
     
-    # Extract the review content
-    review_content = review_data.get('choices', [{}])[0].get('text', '')
+    # Print the entire review data for debugging
+    print("Review data:", json.dumps(review_data, indent=2))
+    
+    # Extract the review content - handle different possible response formats
+    review_content = None
+    
+    # Try different possible paths in the JSON structure
+    if 'choices' in review_data and len(review_data['choices']) > 0:
+        if 'text' in review_data['choices'][0]:
+            review_content = review_data['choices'][0]['text']
+        elif 'message' in review_data['choices'][0]:
+            review_content = review_data['choices'][0]['message'].get('content', '')
+    
+    # If still no content, try other common API response formats
+    if not review_content and 'completion' in review_data:
+        review_content = review_data['completion']
+    
     if not review_content:
-        print("No review content found")
+        print("No review content found in the response")
         sys.exit(1)
+    
+    print("Found review content:", review_content[:100] + "..." if len(review_content) > 100 else review_content)
     
     # Get GitHub token and repository info from environment
     github_token = os.environ.get('GITHUB_TOKEN')
@@ -28,13 +45,18 @@ def main():
         sys.exit(1)
     
     repo_name = os.environ.get('GITHUB_REPOSITORY')
-    pr_number = os.environ.get('GITHUB_EVENT_PATH')
+    pr_number_path = os.environ.get('GITHUB_EVENT_PATH')
+    
+    print(f"Repository: {repo_name}")
+    print(f"Event path: {pr_number_path}")
     
     # If we have a GitHub event path, try to extract PR number from it
-    if pr_number:
-        with open(pr_number, 'r') as f:
+    pr_number = None
+    if pr_number_path:
+        with open(pr_number_path, 'r') as f:
             event_data = json.load(f)
             pr_number = event_data.get('pull_request', {}).get('number')
+            print(f"Extracted PR number: {pr_number}")
     
     if not repo_name or not pr_number:
         print("Could not determine repository or PR number")
