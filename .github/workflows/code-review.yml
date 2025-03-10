@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '**/*.py'  # Adjust for your code language (e.g., .js, .java, .cpp)
+      - '!**/*.yml'  # Exclude .yml files from triggering the workflow
 
 # Add permissions block to allow writing to pull requests
 permissions:
@@ -62,7 +63,7 @@ jobs:
           pip install PyGithub requests
 
       - name: Post review comments
-        run: python post_comments.py review.json
+        run: python post_comments.py review.json --create-review
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
