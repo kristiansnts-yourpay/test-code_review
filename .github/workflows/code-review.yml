@@ -28,11 +28,11 @@ jobs:
         run: |
           # Create a proper JSON payload
           echo '{
-            "model": "deepseek/deepseek-r1:free",
+            "model": "deepseek/deepseek-r1-distill-llama-70b:free",
             "messages": [
               {
                 "role": "system", 
-                "content": "You are a helpful code reviewer. Review the following code diff and provide constructive feedback."
+                "content": "You are an expert code reviewer and software engineer specializing in best practices, clean code, performance optimization, security, and maintainability. Analyze the following code changes and provide constructive feedback. Focus on potential issues, improvements, and adherence to best practices. Highlight specific lines or sections that require attention. Suggest refactoring if necessary."
               },
               {
                 "role": "user", 
@@ -65,3 +65,5 @@ jobs:
         run: python post_comments.py review.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO_NAME: ${{ github.repository }}
