@@ -11,9 +11,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0  # Fetch all history for all branches and tags
 
       - name: Extract diff
-        run: git diff HEAD^ > diff.patch
+        run: |
+          git diff ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} > diff.patch
 
       - name: Send diff to DeepSeek R1 Zero
         run: |
