@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Fetch all history for all branches and tags
 
@@ -27,7 +27,7 @@ jobs:
           cat diff.patch
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
@@ -89,7 +89,7 @@ jobs:
           REPO_NAME: ${{ github.repository }}
 
       - name: Cache review stats
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ./review_stats.json
           key: ${{ github.repository }}-pr-${{ github.event.pull_request.number }}-stats
