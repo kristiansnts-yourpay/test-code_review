@@ -17,40 +17,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
         with:
-          fetch-depth: 0  # Fetch all history for all branches and tags
-
-      - name: Extract diff
-        run: |
-          git diff ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} > diff.patch
-          cat diff.patch
-
-      - name: Send diff to AI for review
-        run: |
-          # Create a proper JSON payload
-          echo '{
-            "model": "deepseek/deepseek-r1-distill-llama-70b:free",
-            "messages": [
-              {
-                "role": "system", 
-                "content": "You are a code reviewer. Be concise and direct. Focus on: 1) Unused code/comments to delete, 2) Code that needs refactoring, 3) Redundant code, 4) Security issues, 5) Performance problems. Use bullet points. Be specific."
-              },
-              {
-                "role": "user", 
-                "content": "'"$(cat diff.patch | sed 's/"/\\"/g')"'"
-              }
-            ]
-          }' > payload.json
+          fetch-depth: 1  # Only need the current commit and its parent
           
-          # Send to OpenRouter
-          curl -X POST \
-            -H "Authorization: Bearer ${{ secrets.OPENROUTER_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d @payload.json \
-            https://openrouter.ai/api/v1/chat/completions > review.json
-          
-          # Show the response for debugging
-          cat review.json
-
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
@@ -59,7 +27,39 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install PyGithub requests
+          pip install PyGithub requests jq
+
+      - name: Extract diff
+        run: |
+          git diff ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} > diff.patch
+          
+      - name: Send diff to AI for review
+        id: ai_review
+        run: |
+          # Create JSON payload with jq for proper escaping
+          jq -n --arg diff "$(cat diff.patch)" '{
+            "model": "deepseek/deepseek-r1-distill-llama-70b:free",
+            "messages": [
+              {
+                "role": "system", 
+                "content": "You are a code reviewer. Be concise and direct. Focus on: 1) Unused code/comments to delete, 2) Code that needs refactoring, 3) Redundant code, 4) Security issues, 5) Performance problems. Use bullet points. Be specific."
+              },
+              {
+                "role": "user", 
+                "content": $diff
+              }
+            ]
+          }' > payload.json
+          
+          # Send to OpenRouter with error handling
+          if ! curl -s -S -f -X POST \
+            -H "Authorization: Bearer ${{ secrets.OPENROUTER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d @payload.json \
+            https://openrouter.ai/api/v1/chat/completions > review.json; then
+            echo "::error::Failed to get AI review. Check API key and service availability."
+            exit 1
+          fi
 
       - name: Post review comments
         run: python post_comments.py review.json
