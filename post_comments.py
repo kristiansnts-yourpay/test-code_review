@@ -45,9 +45,20 @@ def main():
     repo = g.get_repo(repo_name)
     pr = repo.get_pull(pr_number)
     
+    # Get the PR diff to help with file paths and line numbers
+    diff_files = pr.get_files()
+    file_changes = {}
+    for file in diff_files:
+        file_changes[file.filename] = {
+            'patch': file.patch,
+            'additions': file.additions,
+            'deletions': file.deletions,
+            'changes': file.changes
+        }
+    
     if args.suggest_changes:
         # Process the review content to convert code blocks to suggested changes
-        review_content = process_code_suggestions(review_content)
+        review_content = process_code_suggestions(review_content, file_changes)
     
     if args.create_review:
         # Create a formal review with the processed content
@@ -58,7 +69,7 @@ def main():
         pr.create_issue_comment(review_content)
         print(f"Posted review comment to PR #{pr_number}")
 
-def process_code_suggestions(content):
+def process_code_suggestions(content, file_changes=None):
     """
     Process the review content to convert code blocks to GitHub suggested changes format.
     
@@ -67,25 +78,66 @@ def process_code_suggestions(content):
     new code here
     ```
     """
-    # Pattern to find code blocks with language specifier
+    # Pattern to find code blocks with language specifier and optional file path
     # This regex looks for markdown code blocks that might contain suggested changes
-    pattern = r'```([a-zA-Z0-9_+-]+)?\n(.*?)\n```'
+    pattern = r'```([a-zA-Z0-9_+-]+)(?::([^\n]+))?\n(.*?)\n```'
     
     def replacement(match):
         language = match.group(1) or ""
-        code = match.group(2)
+        file_path = match.group(2) if match.group(2) else None
+        code = match.group(3)
         
-        # If it looks like a code suggestion (not just an example or output)
-        # This is a simple heuristic - you might want to improve this logic
-        if "should be" in content.lower() or "change to" in content.lower() or "replace with" in content.lower():
-            return f"```suggestion\n{code}\n```"
+        # Check if this is likely a code suggestion
+        suggestion_indicators = [
+            "should be", "change to", "replace with", "instead of", 
+            "suggestion", "recommended", "fix", "correct", "improve"
+        ]
+        
+        # Look for suggestion indicators in the 3 lines before the code block
+        context_start = max(0, content.find(match.group(0)) - 300)
+        context_end = content.find(match.group(0))
+        context = content[context_start:context_end].lower()
+        
+        is_suggestion = any(indicator in context for indicator in suggestion_indicators)
+        
+        # If it has a file path or looks like a suggestion, convert to suggestion format
+        if file_path or is_suggestion:
+            # If we have a file path, add it as a comment before the suggestion
+            prefix = f"In `{file_path}`:\n" if file_path else ""
+            return f"{prefix}```suggestion\n{code}\n```"
         else:
             # Keep the original code block
             return f"```{language}\n{code}\n```"
     
     # Replace code blocks with suggestion format
     processed_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+    
+    # Add a note about suggested changes at the top of the review
+    if processed_content != content:
+        processed_content = (
+            "## AI Code Review\n\n"
+            "> Note: This review includes suggested code changes that can be directly applied.\n\n"
+            + processed_content
+        )
+    
     return processed_content
+
+def extract_file_and_line_info(context):
+    """
+    Extract file path and line numbers from context around a code suggestion.
+    Returns (file_path, start_line, end_line) or (None, None, None) if not found.
+    """
+    # Pattern to match file paths and line numbers like "file.py:10-20" or "path/to/file.py line 15"
+    file_pattern = r'(?:in|file|at)\s+[`\'"]?([a-zA-Z0-9_\-./\\]+\.[a-zA-Z0-9]+)[`\'"]?(?:\s+(?:line[s]?|:)\s*(\d+)(?:\s*-\s*(\d+))?)?'
+    
+    match = re.search(file_pattern, context, re.IGNORECASE)
+    if match:
+        file_path = match.group(1)
+        start_line = int(match.group(2)) if match.group(2) else None
+        end_line = int(match.group(3)) if match.group(3) else start_line
+        return file_path, start_line, end_line
+    
+    return None, None, None
 
 if __name__ == "__main__":
     main() 
