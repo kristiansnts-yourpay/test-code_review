@@ -64,12 +64,48 @@ def create_review_payload(diff_content, model="deepseek/deepseek-r1-distill-llam
     """
     guideline = select_guidelines(diff_content)
     
+    # Add detailed code example format instruction above the review
+    review_instruction = """
+When providing code examples, please use clear "Wrong" and "Correct" sections with explanatory comments:
+
+# Wrong:
+
+# Arguments on first line forbidden when not using vertical alignment
+foo = long_function_name(var_one, var_two,
+    var_three, var_four)
+
+# Further indentation required as indentation is not distinguishable
+def long_function_name(
+    var_one, var_two, var_three,
+    var_four):
+    print(var_one)
+
+# Correct:
+
+# Aligned with opening delimiter
+foo = long_function_name(var_one, var_two,
+                         var_three, var_four)
+
+# Add 4 spaces (an extra level of indentation) to distinguish arguments from the rest
+def long_function_name(
+        var_one, var_two, var_three,
+        var_four):
+    print(var_one)
+
+# Hanging indents should add a level
+foo = long_function_name(
+    var_one, var_two,
+    var_three, var_four)
+"""
+    
+    guideline_content = guideline["content"] + "\n\n" + review_instruction
+    
     return {
         "model": model,
         "messages": [
             {
                 "role": "system",
-                "content": guideline["content"]
+                "content": guideline_content
             },
             {
                 "role": "user",

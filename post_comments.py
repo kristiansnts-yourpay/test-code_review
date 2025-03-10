@@ -100,6 +100,9 @@ def process_code_suggestions(content, file_changes=None):
     # This regex looks for markdown code blocks that might contain suggested changes
     pattern = r'```([a-zA-Z0-9_+-]+)(?::([^\n]+))?\n(.*?)\n```'
     
+    # Pattern to identify "Correct:" sections in code examples
+    correct_pattern = r'#\s*Correct:\s*\n(.*?)(?=\n\n|$)'
+    
     def replacement(match):
         language = match.group(1) or ""
         file_path = match.group(2) if match.group(2) else None
@@ -117,6 +120,12 @@ def process_code_suggestions(content, file_changes=None):
         context = content[context_start:context_end].lower()
         
         is_suggestion = any(indicator in context for indicator in suggestion_indicators)
+        
+        # Check if this is a "Correct:" section from a code example
+        correct_match = re.search(correct_pattern, code, re.DOTALL)
+        if correct_match:
+            code = correct_match.group(1).strip()
+            is_suggestion = True
         
         # If it has a file path or looks like a suggestion, convert to suggestion format
         if file_path or is_suggestion:
