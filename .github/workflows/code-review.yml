@@ -13,7 +13,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Extract diff
-        run: git diff origin/main...HEAD > diff.patch
+        run: git diff HEAD^ > diff.patch
 
       - name: Send diff to DeepSeek R1 Zero
         run: |
