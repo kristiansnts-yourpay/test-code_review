@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '**/*.py'  # Adjust for your code language (e.g., .js, .java, .cpp)
+      - '**/*.php'  # Added PHP files to trigger the workflow
       - '!**/*.yml'  # Exclude .yml files from triggering the workflow
 
 # Add permissions block to allow writing to pull requests
@@ -25,33 +26,6 @@ jobs:
           git diff ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} > diff.patch
           cat diff.patch
 
-      - name: Send diff to AI for review
-        run: |
-          # Create a proper JSON payload with the working format
-          echo '{
-            "model": "deepseek/deepseek-r1-distill-llama-70b:free",
-            "messages": [
-              {
-                "role": "system", 
-                "content": "You are an expert code reviewer and software engineer specializing in best practices, clean code, performance optimization, security, and maintainability. Analyze the following code changes and provide constructive feedback. Focus on potential issues, improvements, and adherence to best practices. Highlight specific lines or sections that require attention. Suggest refactoring if necessary."
-              },
-              {
-                "role": "user", 
-                "content": "'"$(cat diff.patch | sed 's/"/\\"/g')"'"
-              }
-            ]
-          }' > payload.json
-          
-          # Send to OpenRouter
-          curl -X POST \
-            -H "Authorization: Bearer ${{ secrets.OPENROUTER_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d @payload.json \
-            https://openrouter.ai/api/v1/chat/completions > review.json
-          
-          # Show the response for debugging
-          cat review.json
-
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
@@ -61,6 +35,23 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install PyGithub requests
+
+      - name: Generate review payload
+        run: |
+          # Use the guidelines_selector.py script to generate the payload
+          python guidelines_selector.py diff.patch payload.json
+
+      - name: Send diff to AI for review
+        run: |
+          # Send to OpenRouter
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.OPENROUTER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d @payload.json \
+            https://openrouter.ai/api/v1/chat/completions > review.json
+          
+          # Show the response for debugging
+          cat review.json
 
       - name: Post review comments
         run: python post_comments.py review.json
