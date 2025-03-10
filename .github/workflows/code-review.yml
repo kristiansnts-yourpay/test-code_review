@@ -1,0 +1,27 @@
+name: Code Review
+
+on:
+  pull_request:
+    paths:
+      - '**/*.py'  # Adjust for your code language (e.g., .js, .java, .cpp)
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Extract diff
+        run: git diff origin/main...HEAD > diff.patch
+
+      - name: Send diff to DeepSeek R1 Zero
+        run: |
+          response=$(curl -X POST -H "Authorization: Bearer ${{ secrets.OPENROUTER_API_KEY }}" \
+          -H "Content-Type: application/json" \
+          -d @diff.patch \
+          https://openrouter.ai/api/v1/completions)
+          echo "$response" > review.json
+
+      - name: Post review comments
+        run: python post_comments.py review.json
