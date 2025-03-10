@@ -26,7 +26,7 @@ jobs:
 
       - name: Send diff to AI for review
         run: |
-          # Create a proper JSON payload
+          # Create a proper JSON payload with proper escaping
           echo '{
             "model": "deepseek/deepseek-r1-distill-llama-70b:free",
             "messages": [
@@ -36,7 +36,7 @@ jobs:
               },
               {
                 "role": "user",
-                "content": "Please review the following code and provide detailed, constructive code review comments that follow these patterns:\\n\\n1. Requesting clarification (e.g., \\"Could you explain how this function handles null values?\\")\\n2. Suggesting alternative approaches (e.g., \\"Consider using a Map here to eliminate nested loops\\")\\n3. Highlighting potential bugs (e.g., \\"This might cause an exception if the list is empty\\")\\n4. Suggesting style improvements (e.g., \\"Adding spaces would improve readability\\")\\n5. Commending good work (e.g., \\"Nice job with this refactoring\\")\\n\\nMake sure each comment references specific line numbers, explains why the change matters, and offers concrete suggestions when appropriate.\\n\\nHere'\''s the code to review:\\n\\n'"$(cat diff.patch | sed 's/"/\\"/g')"'"
+                "content": "Please review the following code and provide detailed, constructive code review comments that follow these patterns:\\n\\n1. Requesting clarification (e.g., \\"Could you explain how this function handles null values?\\")\\n2. Suggesting alternative approaches (e.g., \\"Consider using a Map here to eliminate nested loops\\")\\n3. Highlighting potential bugs (e.g., \\"This might cause an exception if the list is empty\\")\\n4. Suggesting style improvements (e.g., \\"Adding spaces would improve readability\\")\\n5. Commending good work (e.g., \\"Nice job with this refactoring\\")\\n\\nMake sure each comment references specific line numbers, explains why the change matters, and offers concrete suggestions when appropriate.\\n\\nHere'\''s the code to review:\\n\\n'"$(cat diff.patch | jq -sR .)"'"
               }
             ]
           }' > payload.json
