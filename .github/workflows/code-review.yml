@@ -17,7 +17,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
         with:
-          fetch-depth: 1  # Only need the current commit and its parent
+          fetch-depth: 0  # Fetch all history to ensure we have the base commit
           
       - name: Set up Python
         uses: actions/setup-python@v2
@@ -27,29 +27,33 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install PyGithub requests jq
+          pip install PyGithub requests
+          # Removed jq as we're not using it in the updated approach
 
       - name: Extract diff
         run: |
+          # Use GitHub's provided refs instead of commit SHAs directly
           git diff ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} > diff.patch
           
       - name: Send diff to AI for review
         id: ai_review
         run: |
-          # Create JSON payload with jq for proper escaping
-          jq -n --arg diff "$(cat diff.patch)" '{
+          # Create a more comprehensive prompt with better instructions
+          cat > payload.json << EOF
+          {
             "model": "deepseek/deepseek-r1-distill-llama-70b:free",
             "messages": [
               {
                 "role": "system", 
-                "content": "You are a code reviewer. Be concise and direct. Focus on: 1) Unused code/comments to delete, 2) Code that needs refactoring, 3) Redundant code, 4) Security issues, 5) Performance problems. Use bullet points. Be specific."
+                "content": "You are an expert code reviewer and software engineer specializing in best practices, clean code, performance optimization, security, and maintainability. Analyze the following code changes and provide constructive feedback. Focus on: 1) Security vulnerabilities, 2) Performance issues, 3) Code maintainability, 4) Potential bugs, 5) Adherence to best practices. Format your review with clear headings and bullet points. Be specific about file locations and line numbers when possible."
               },
               {
                 "role": "user", 
-                "content": $diff
+                "content": "### PR Details:\n- Repository: ${{ github.repository }}\n- Branch: ${{ github.head_ref }} → ${{ github.base_ref }}\n- Author: ${{ github.event.pull_request.user.login }}\n- Title: \"${{ github.event.pull_request.title }}\"\n- Description: \"${{ github.event.pull_request.body }}\"\n\n### Diff:\n\`\`\`diff\n$(cat diff.patch)\n\`\`\`\n\nPlease provide a thorough code review with actionable feedback."
               }
             ]
-          }' > payload.json
+          }
+          EOF
           
           # Send to OpenRouter with error handling
           if ! curl -s -S -f -X POST \
