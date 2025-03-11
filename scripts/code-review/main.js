@@ -180,8 +180,26 @@ async function main() {
     const openrouter = new OpenRouterAPI();
     const stats = new ReviewStats();
 
-    const baseBranch = process.env.BASE_BRANCH || 'origin/develop';
-    const diffOutput = execSync(`git diff ${baseBranch} HEAD`).toString();
+    // Use the GitHub event's base branch or fall back to 'main'
+    const baseBranch = process.env.BASE_BRANCH || 'origin/main';
+    
+    // Fetch the base branch to ensure it exists
+    try {
+      execSync('git fetch --no-tags --prune --depth=1 origin +refs/heads/*:refs/remotes/origin/*');
+      console.log('Fetched remote branches');
+    } catch (fetchError) {
+      console.warn('Warning: Failed to fetch branches:', fetchError.message);
+    }
+    
+    // Get the diff between the base branch and current HEAD
+    let diffOutput;
+    try {
+      diffOutput = execSync(`git diff ${baseBranch} HEAD`).toString();
+    } catch (diffError) {
+      console.warn(`Failed to diff against ${baseBranch}, falling back to comparing with HEAD~1`);
+      diffOutput = execSync('git diff HEAD~1 HEAD').toString();
+    }
+    
     const files = parseDiff(diffOutput);
 
     const filesToReview = files.filter((file) => file.to && minimatch(file.to, filePattern));

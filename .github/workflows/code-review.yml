@@ -51,6 +51,7 @@ jobs:
           GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
           FILE_PATTERN: '**/*.{js,jsx,ts,tsx,py,php}'
           MODEL: 'deepseek/deepseek-r1-distill-llama-70b:free'
         run: |
