@@ -110,7 +110,7 @@ async function processChunk(chunk, file, github, openrouter, stats) {
   console.log(`Reviewing ${file.to} with context:\n${contentWithLines}`);
   console.log('Changed lines:', addedLines);
 
-  const reviews = await ollama.reviewCode(contentWithLines, file.to, addedLines);
+  const reviews = await openrouter.reviewCode(contentWithLines, file.to, addedLines);
   console.log('Received reviews:', JSON.stringify(reviews, null, 2));
 
   const commentsToPost = [];

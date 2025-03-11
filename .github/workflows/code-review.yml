@@ -55,7 +55,7 @@ jobs:
           MODEL: 'deepseek/deepseek-r1-distill-llama-70b:free'
         run: |
           echo "Starting code review process..."
-          node @/scripts/code-review/main.js
+          node ./scripts/code-review/main.js
 
       - name: Post review summary
         run: |
