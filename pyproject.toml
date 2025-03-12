@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-code-reviewer"
+version = "0.1.0"
+description = "AI-powered code review tool using OpenRouter API"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Your Name", email = "your.email@example.com"},
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Quality Assurance",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "requests>=2.31.0",
+    "parse-diff>=0.7.1",
+    "minimatch>=0.0.5",
+    "aiohttp>=3.9.0",
+]
+
+[project.scripts]
+ai-review = "code_review.main:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["code_review"]
+
+[tool.setuptools.package-data]
+code_review = ["code_review_guidelines/*.json"] 
