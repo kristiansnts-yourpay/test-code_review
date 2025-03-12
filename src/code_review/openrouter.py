@@ -2,7 +2,8 @@ import os
 import json
 import requests
 from typing import List, Dict, Any, Optional
-from minimatch import Minimatch
+from pathspec import PathSpec
+from pathspec.patterns import GitWildMatchPattern
 from .config import REVIEW_CONFIG
 
 class OpenRouterAPI:
@@ -24,7 +25,7 @@ class OpenRouterAPI:
         })
 
     def should_review_file(self, filename: str) -> bool:
-        return Minimatch(self.file_pattern).match(filename)
+        return PathSpec.from_lines(GitWildMatchPattern, [self.file_pattern]).match_file(filename)
 
     def make_request(self, endpoint: str, data: Dict[str, Any]) -> Dict[str, Any]:
         url = f'{self.base_url}{endpoint}'
