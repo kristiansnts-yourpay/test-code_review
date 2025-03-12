@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
-      - '**/*.py'  # Adjust for your code language
+      - '**/*.py'
       - '**/*.php'
       - '**/*.js'
       - '**/*.ts'
@@ -29,14 +29,16 @@ jobs:
         id: changed-files
         uses: tj-actions/changed-files@v42
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          node-version: '20'
+          python-version: '3.11'
+          cache: 'pip'
 
       - name: Install dependencies
         run: |
-          npm install parse-diff minimatch glob
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Extract diff
         run: |
@@ -54,6 +56,7 @@ jobs:
           BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
           FILE_PATTERN: '**/*.{js,jsx,ts,tsx,py,php}'
           MODEL: 'deepseek/deepseek-r1-distill-llama-70b:free'
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           echo "Starting code review process..."
-          node ./scripts/code-review/main.js
+          python -m src.code_review.main 
