@@ -1,3 +1,0 @@
-requests>=2.31.0
-parse-diff>=0.7.1
-minimatch>=0.0.5 
