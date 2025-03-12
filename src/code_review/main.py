@@ -3,7 +3,8 @@ import asyncio
 import subprocess
 from typing import List, Dict, Any, Optional
 from unidiff import PatchSet
-from minimatch import Minimatch
+from pathspec import PathSpec
+from pathspec.patterns import GitWildMatchPattern
 
 from .github import GitHubAPI
 from .openrouter import OpenRouterAPI
@@ -217,7 +218,7 @@ async def main():
         file_pattern = os.getenv('FILE_PATTERN')
         files_to_review = [
             file for file in files
-            if file['to'] and Minimatch(file_pattern).match(file['to'])
+            if file['to'] and PathSpec.from_lines(GitWildMatchPattern, [file_pattern]).match_file(file['to'])
         ]
 
         print(f"Found {len(files)} changed files")
