@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=45", "wheel", "setuptools_scm>=6.2"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -23,7 +23,7 @@ classifiers = [
 ]
 dependencies = [
     "requests>=2.31.0",
-    "parse-diff>=0.7.1",
+    "unidiff>=0.7.5",
     "minimatch>=0.0.5",
     "aiohttp>=3.9.0",
 ]

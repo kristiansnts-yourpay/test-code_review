@@ -2,7 +2,7 @@ import os
 import asyncio
 import subprocess
 from typing import List, Dict, Any, Optional
-from parse_diff import parse_diff
+from unidiff import PatchSet
 from minimatch import Minimatch
 
 from .github import GitHubAPI
@@ -170,7 +170,50 @@ async def main():
             diff_output = subprocess.run(['git', 'diff', 'HEAD~1', 'HEAD'],
                                        check=True, capture_output=True, text=True).stdout
         
-        files = parse_diff(diff_output)
+        # Parse the diff using unidiff
+        patch_set = PatchSet(diff_output)
+        
+        # Convert to a format similar to what parse-diff would provide
+        files = []
+        for patched_file in patch_set:
+            chunks = []
+            for hunk in patched_file:
+                changes = []
+                position = 0
+                for line in hunk:
+                    if line.is_added:
+                        changes.append({
+                            'type': 'add',
+                            'content': line.value,
+                            'ln': line.target_line_no
+                        })
+                    elif line.is_removed:
+                        changes.append({
+                            'type': 'del',
+                            'content': line.value,
+                            'ln': line.source_line_no
+                        })
+                    else:
+                        changes.append({
+                            'type': 'normal',
+                            'content': line.value,
+                            'ln': line.target_line_no or line.source_line_no
+                        })
+                    position += 1
+                
+                chunks.append({
+                    'content': hunk.section_header,
+                    'changes': changes,
+                    'new_start': hunk.target_start,
+                    'new_lines': hunk.target_length
+                })
+            
+            files.append({
+                'from': patched_file.source_file,
+                'to': patched_file.target_file,
+                'chunks': chunks
+            })
+        
         file_pattern = os.getenv('FILE_PATTERN')
         files_to_review = [
             file for file in files

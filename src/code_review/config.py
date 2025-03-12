@@ -9,7 +9,7 @@ from .emoji_config import EMOJI_CONFIG
 
 def load_guidelines() -> Dict[str, str]:
     """Load language-specific review guidelines from JSON file."""
-    guidelines_path = Path(__file__).parent.parent.parent / 'code_review_guidelines' / 'guidelines.json'
+    guidelines_path = Path(__file__).parent.parent / 'code_review_guidelines' / 'guidelines.json'
     try:
         with open(guidelines_path, 'r') as f:
             guidelines_data = json.load(f)
