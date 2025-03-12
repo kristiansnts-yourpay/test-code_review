@@ -62,4 +62,4 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
         run: |
           echo "Starting code review process..."
-          python -m src.code_review.main 
+          python -m code_review.main 
